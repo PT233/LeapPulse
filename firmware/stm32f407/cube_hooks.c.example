@@ -1,0 +1,38 @@
+/* Copy into Cube USER CODE blocks after mapping your schematic in CubeMX. */
+#include "app.h"
+#include "stm32_port.h"
+
+/* Place after MX_GPIO_Init, MX_I2C..._Init and MX_USART..._UART_Init. */
+static void start_leappulse(void)
+{
+    const struct lp_stm32_config config = {
+        .i2c = &hi2c1, /* Use the generated handle for the board's I2C bus. */
+        .hc05 = &huart2, /* Use the generated handle for the HC-05 data UART. */
+        .start = {START_GPIO_Port, START_Pin, true},
+        .encoder_a = {ENC_A_GPIO_Port, ENC_A_Pin, false},
+        .encoder_b = {ENC_B_GPIO_Port, ENC_B_Pin, false},
+        .hc05_state = {HC05_STATE_GPIO_Port, HC05_STATE_Pin, false},
+        /* Populate watchdog, battery_mv, allow_update and report_sensor_health as needed.
+           OTA defaults to disabled until allow_update implements local authorization. */
+    };
+    if (!lp_stm32_port_init(&config) || !lp_app_start()) {
+        Error_Handler();
+    }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *uart)
+{
+    lp_stm32_uart_rx_complete(uart);
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *uart)
+{
+    lp_stm32_uart_error(uart);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t pin)
+{
+    if (pin == BMI270_INT1_Pin || pin == MAX30102_INT_Pin) {
+        lp_app_sensor_wake_isr();
+    }
+}

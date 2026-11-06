@@ -1,0 +1,5 @@
+/build*/
+CMakeUserPresets.json
+*.pem
+*.key
+__pycache__/
